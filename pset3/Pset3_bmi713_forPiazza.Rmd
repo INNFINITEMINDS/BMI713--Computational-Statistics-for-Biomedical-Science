@@ -1,0 +1,96 @@
+---
+title: "BMI713 Problem Set 3"
+output:
+  pdf_document: default
+  html_document: default
+header-includes: \usepackage{amsmath}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE , eval=TRUE)
+```
+
+#### Instructions:
+
+Please submit this problem set before class on Tuesday, November 14. Problem sets may be submitted within a week past the due date at a 20% penalty; each person is allowed to submit one problem late (within a week) without penalty. Please comment your code indicating what your functions do and any relevant passage (not necessarily every line of code), because it is part of the requirements of each exercise. Missing comments will not allow the full score.
+
+If you have any questions, please post on the piazza site. This problem set was prepared by Tiziana Sanavia and Giorgio Melloni, so they will be most prepared to answer questions.
+
+NOTE: there are some exercises (1.e, 3.c and Extra.b) where we ask to perform the calculation "by hand". This means that you are not allowed to use the built-in R functions like `chisq.test`, `wilcox.test` and `fisher.test` but rather perform all the passages as shown in the lectures (still using R for the math, if needed). 
+
+### 1. Non-Parametric Testing Part 1 (35 points)
+
+A pharmaceutical company is testing a new soporific drug that is supposed to be more effective than the state-of-the-art medication. 10 subjects are recruited and the hours of extra sleep are reported. The null hypothesis $H_0$ is that there is no difference in extra hours of sleep between the two drugs.
+
+```{r , echo=FALSE , eval=TRUE}
+Subject <- 1:10
+Old_Drug <- c(1.9 , -1.6 , -0.2 , -1.3 , -0.1 , 3.4 , 3.7 , 0.8 , 0.0 , 2.0)
+New_Drug <- c(0.7 , 0.8 , 1.1 , 0.1 , -0.2 , 4.4 , 5.5 , 1.6 , 4.6 , 3.4)
+knitr::kable( cbind(Subject , New_Drug , Old_Drug ))
+```
+
+#### (a) Calculate the Wilcoxon signed-rank T statistic (5 points)
+
+#### (b) Calculate $\mu_T$ and $\sigma_T$ under the Null hypothesis (5 points)
+
+#### (c) Using the T statistic, $\mu_T$ and $\sigma_T$, calculate the p-value under the normal approximation and comment the result obtained. (5 points)
+
+#### (d) Calculate the p-value using the built-in R function for Wilcoxon signed-rank test. Are the p-values different? Are the conclusions different? NOTE, use correct=FALSE and exact=TRUE to obtain the same result in (1.d) and (1.e) (5 points)
+
+#### (e) Calculate the exact Wilcoxon signed-rank p-value "by hand" and show all the steps in order to obtain it (DO NOT use the built-in function and comment your code). (10 points)
+
+#### (f) Calculate the p-value using an appropriate equivalent parametric test and comment the obtained results with respect to the 'Non-parametric' version. (5 points)
+
+
+### 2. Non-Parametric Testing Part 2 (30 points)
+
+In this second part we are going to simulate a few data to check the difference between unpaired T-test and Wilcoxon rank sum test.
+
+Imagine two vectors of length 10 from two different exponential distributions:
+
+```{r , echo = TRUE , eval = FALSE}
+x <- rexp(10 , rate = 10)
+y <- rexp(10 , rate = 40)
+```
+
+The hypothesis test is that $\mu_x$ is different than $\mu_y$ (two-sided $H_1$)
+
+#### (a) What is the most appropriate test in this case and why? (5 points)
+
+#### (b) As a general rule, if the assumptions of CLT do not hold, a non parametric test is more appropriate and sometimes more powerful than its parametric counterpart. By running a simulation with 1000 random couples (x,y) like above, show that the fraction of rejected Null hypotheses at alpha = 0.01 is higher in the case of a non parametric test. NOTE alpha is 1%!! What are we showing with this simulation? (10 points)
+
+#### (c) An old statistical adagio says "If the data don't behave, hit it with a log. If the data still don't behave, hit it with a log again". What happen if we log-transform the data? Run the same simulation with log(x) and log(y) and comment the results obtained? (10 points)
+
+#### (d) Is the log transformation useful for the wilcoxon test? if not, why? (5 points)
+
+
+### 3. Contingency tables (35 points)
+
+A statistical analysis that combines the results of several studies on the same subject is called a meta-analysis. A meta-analysis compared aspirin with placebo on incidence of heart attack and of stroke, separately for men and from women (J. Am. Med. Assoc., 295: 306-313, 2006). For the Women's Health Study, heart attacks were reported for 198 of 19,934 taking aspirin and for 193 of 19,942 taking placebo. We are interested in whether aspirin was helpful in reducing the risk of heart attack.
+
+#### (a) State the null hypothesis and the alternative hypothesis. (2 points)
+
+#### (b) Construct the 2 x 2 contingency table that cross classifies the treatment (aspirin, placebo) and heart attack status (yes, no). (3 points)
+
+#### (c) Perform the chi-square test. Report the test statistic (5 points), the degrees of the freedom (5 points) and calculate the p-value without using the R chisquare built-in function (10 points). What conclusion can you draw from this test? (5 points)
+
+#### (d) Perform the chi-square test using R built-in function. NOTE: use correct=FALSE to obtain the same result of point (3.c). (5 points)
+
+### Extra: Fisher's Exact Test (8 points)
+
+Consider the following example of contingency table from a study evaluating the correlation between gender and diet:
+
+```{r , echo=FALSE , eval=TRUE}
+mat<-matrix(NA,3,4)
+colnames(mat)<-c(" ","Diet","Non Diet","rowTotal")
+mat[1,]<-c("Men","2","10","12")
+mat[2,]<-c("Women","8","12","20")
+mat[3,]<-c("colTotal","10","22","32")
+knitr::kable(mat)
+```
+
+We want to test whether men are less prone to start a diet than women.
+
+#### (a) Display the tables that are as 'extreme' as or more extreme than the observed table (5 points)
+
+#### (b) Using the tables in above, calculate the probabilities to obtain the p-value of the Fisher's Exact test (3 points)

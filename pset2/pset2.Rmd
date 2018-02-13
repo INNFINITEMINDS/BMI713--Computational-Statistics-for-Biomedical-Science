@@ -1,0 +1,146 @@
+---
+title: "pset2"
+author: "Chen Dong"
+date: "11/1/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# CODE 1.1
+```{r}
+pbinom(2,5,0.5)
+```
+# ANSWER 1.1
+P-value is greater than the significance level (0.05), so we cannot reject the null hypothesis.
+
+# CODE 1.2
+```{r}
+pbinom(4,10,0.5)
+```
+# ANSWER 1.2
+P-value is greater than the significance level (0.05), so we cannot reject the null hypothesis.
+
+# CODE 1.3
+```{r}
+pbinom(40,100,0.5)
+```
+# ANSWER 1.3
+P-value is smaller than the significance level (0.05), so we reject the null hypothesis.
+
+# CODE 1.4
+```{r}
+pbinom(400,1000,0.5)
+```
+# ANSWER 1.4
+P-value is smaller than the significance level (0.05), so we reject the null hypothesis.
+
+# ANSWER 1.5
+As we increase the total number of mice treated, the p-value decreases. Since the total number of samples increases, the standard deviation of the sample proportion decreases with increasing n. So the corresponding p-value decreases.
+
+# ANSWER 2.1
+$H_0:\mu_{treatment}=\mu_{control}$
+$H_1:\mu_{treatment}>\mu_{control}$
+
+# ANSWER 2.2
+unpaired two-sample t-test with equal variances
+
+# ANSWER 2.3
+We want to determine if two sets of data are significantly different from each other by proposing the null hypothesis that the mean of the treatment group is the same as the mean of the control group.
+
+# ANSWER 2.4
+$t=\frac{\overline{\rm X_1}-\overline{\rm X_2}}{S\sqrt{\frac{1}{n_1}+\frac{1}{n_2}}}$
+
+# ANSWER 2.5
+If the assumption about equal variances is right, we can increase the power of the test and decrease p-value.
+If the assumption is not true, the result we obtained will not reflect the ture test statistic.
+
+# ANSWER 3.1
+Permutation test. 
+This test is not the same test utilized in 3.2.
+Permutation tests exist for any test statistic, regardless of whether or not its distribution is known. But t-test assumes normal distribution. Samples in permutation test are assumed to be independent and “exchangeable” while t-test does not have that assumption.
+
+# ANSWER 3.2
+The assumption about the data in relation to the hypotheses is that the means of the data is the same.
+Further, assuming the data being observed is not normally distributed and the sample size is not large enough to treat it as asymptotically normal.
+The assumption about the distribution data is that the distribution of the observations from two groups are the same and group labels are irrelevant.
+
+# CODE 3.3
+```{r}
+treatment <- c(10, 12, 8, 16, 22, 4, 7, 2, 9)
+control <- c(1, 30, 45, 20, 12, 20, 32, 40)
+# permutation function
+permu <- function(treatment,control,n){
+  # combine data into one vector
+  dat <- c(treatment,control)
+  # length of treatment and control
+  t_l <- length(treatment)
+  c_l <- length(control)
+  # assign names
+  names(dat) <- rep(c("T","C"),c(t_l,c_l))
+  # permute through the data
+  Ainds <- combn(sum(t_l,c_l),t_l) 
+  # What is the total number of permutations possible?
+  l <- ncol(Ainds)
+  # choose 1000 of the permutations
+  Ainds_1000 <- Ainds[,sample(l,n)]
+  # mean differences, test statistic
+  allpd <- apply(Ainds_1000,2,function(x) mean(dat[-x])-mean(dat[x]))
+  plot(density(allpd),xlab="mean difference",ylab="density",main="Permutation distribution of the differences")
+  # a vertical line representing the observed test statistic
+  d_obs <- mean(treatment)-mean(control)
+  abline(v=d_obs)
+  p_value <- length(allpd[allpd>d_obs])/n
+  return(p_value)
+}
+permu(treatment,control,1000)
+```
+
+# ANSWER 3.4
+P-value is greater than the significance level (0.05), so we cannot reject the null hypothesis.
+
+# ANSWER 4.1
+Another test statistic that gives the same result as the one utilized in problem 3. is Mann–Whitney U-test. As another non-parametric alternative to t-tests, Mann–Whitney U-test can be used besides permutation test. It tests for a difference in central tendency of two groups, or, with certain assumptions, for the difference in medians. 
+
+
+# ANSWER 4.2
+Central limit theorem can play a role in determining what statistical test we use for group comparisons because central limit theorem tells us that a sampling distribution always has significantly less wildness or variability, as measured by standard deviation, than the population it’s drawn from. Additionally, the sampling distribution will look more and more like normal distribution as the sample size is increased, even when the population itself is not normally distributed. 
+Law of large numbers can play a role in determining what statistical test we use for group comparisons because it says essentially that probability and statistics can only predict overall results for a large number of data points or trials. With a large enough sample size, there are so many peaks that they run together and the sampling distribution starts to look like a typical normal distribution.
+
+# ANSWER 5
+$H_0:\mu_{treatment}=\mu_{control}$
+$H_1:\mu_{treatment}>\mu_{control}$
+Proportion test result in a p-value of 7.96e-5. P-value is smaller than the significance level (0.05), so we  reject the null hypothesis. 
+
+# CODE 5
+```{r}
+p_treatment <- 34/80
+p_control <- 25/134
+p <- (25+34)/(80+134)
+z <- (p_treatment-p_control)/sqrt(p*(1-p)*(1/80+1/134))
+z
+# pvalue
+1-pnorm(z)
+```
+
+# ANSWER 6
+7 hours
+
+# CODE 7
+```{r}
+library(coin)
+g1 <- c(15,20,21,26,28)
+g2 <- c(23,26,34,39)
+dat <- c(g1, g2)
+label <- factor(rep(c("first", "second"), c(5,4)))
+oneway_test(dat ~ label, alternative="two.sided", distribution="exact")
+oneway_test(dat ~ label, alternative="less", distribution="exact")
+```
+
+# ANSWER 7
+We cannot reject the null hypothesis of no difference in recovery times between the two groups in favor of a two-sided alternative hypothesis at the 0.05 level using a two-sided permutation test.
+It is possible to obtain 1-sided p values from the datasets generated to obtain the confidence interval.
+
+

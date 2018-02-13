@@ -1,0 +1,230 @@
+---
+title: 'Hypothesis testing: some extra examples'
+author: "Eric Bartell"
+output:
+  html_document:
+    code_folding: show
+    fig_height: 8
+    fig_width: 10
+    highlight: haddock
+    toc: yes
+    toc_depth: 5
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '5'
+  word_document:
+    toc: yes
+    toc_depth: '5'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE , eval=TRUE)
+```
+
+
+## One Sample
+
+We know the average height of an adult male in the US is 70 inches with a standard deviation of 3 inches.
+
+If we want to check if the heights of people in our class is the same as that of the US average male, what statistical test should we use?
+
+$$Z=\frac{\bar{X}-\mu}{\frac{\sigma}{\sqrt{n}}}$$
+$$t=\frac{\bar{X}-\mu}{\frac{s}{\sqrt{n}}}$$
+
+My plan here is to first look at how these function with a couple of class heights (2-3).
+
+As we investigate, what do you notice about the difference in the p-values from the Z-test vs the t-test? Why is this?
+```
+The Z-test should generally be more significant than the t-test because they follow different distributions.
+```
+Then we will look at generating heights, and as n increases p-values will drop for both tests.
+
+```{r, echo=T, eval=T}
+set.seed(1)
+mu=70
+#heights=c(72,66,66.5,68)
+#heights=rnorm(n = 2,mean = 64,sd = 3)
+#heights=rnorm(n = 10,mean = 64,sd = 3)
+heights=rnorm(n = 50,mean = 64,sd = 3)
+
+
+xbar=mean(heights)
+populationStandardDeviation=3
+n=length(heights)
+
+#Trying Z-test:
+zscore=abs(xbar-mu)/(populationStandardDeviation/sqrt(n))
+pval_z=1-pnorm(zscore)
+print("Z-test pvalue:")
+print(pval_z)
+
+#Trying T-test:
+sampleStandardDeviation=sd(heights)
+tstat=abs(xbar-mu)/(sampleStandardDeviation/sqrt(n))
+pval_t=1-pt(tstat,df = n-1)
+print("T-test pvalue:")
+print(pval_t)
+
+#t.test(x = heights, mu = 70, alternative = "less")
+
+```
+
+
+## Two Sample
+
+We are investigating the mutation rate of different cancer cell lines. We have, for each cell type, multiple counts of number of mutations identified in that cell line.
+
+### 1
+We prepare replicates of cell type A and B together, and we do this multiple times (so we have n pairs of cells of types A and B that were grown in parallel). In this case, what test would we use?
+
+### 2.1
+We prepare batches of A and then batches of B; we have an uneven number of replicates from each group. Which test do we use here?
+
+Non-equal variances:
+$$t=\frac{\bar{x_1}-\bar{x_2}}{\sqrt{\frac{s_1^2}{n_1} + \frac{s_2^2}{n_2}}}$$
+where
+$$df_{not equal}=\frac{(\frac{s_1^2}{n_1} + \frac{s_2^2}{n_2})^2}{\frac{(\frac{s_1^2}{n_1})^2}{n_1-1} + \frac{(\frac{s_2^2}{n_2})^2}{n_2-1}}$$
+
+Equal variances:
+$$t=\frac{\bar{x_1}-\bar{x_2}}{s\sqrt{\frac{1}{n_1} + \frac{1}{n_2}}}$$
+where
+$$s=\sqrt{\frac{(n_1-1)s_1^2 + (n_2-1)s_2^2}{n_1+n_2-2}}$$
+and
+$$df_{equal}=n_1 + n_2 - 2$$
+
+Do we perform a test for equal variances or different variances?
+$$F=\frac{s_1^2}{s_2^2}$$
+where
+$$df_1=n_1-1$$
+$$df_2=n_2-2$$
+
+### 2.2
+Perform this test!
+Are the A and B groups mutation counts significantly different?
+
+```{r}
+set.seed(2)
+#(Cervical cancer: ~8.6 mutation per megabase * ~3000 megabases)
+A_numMutations = rnorm(8,mean = 25800,sd = 5500) 
+
+#(Esophagial cancer: ~9.2 mutation per megabase * ~3000 megabases)
+B_numMutations = rnorm(7,mean = 27600,sd = 7200) 
+
+x_1_bar=mean(A_numMutations)
+x_2_bar=mean(B_numMutations)
+n_1=length(A_numMutations)
+n_2=length(B_numMutations)
+s_1=sd(A_numMutations)
+s_2=sd(B_numMutations)
+
+
+#perform f_stat test
+f_stat=s_1^2/s_2^2
+f_pval=pf(f_stat,df1 = n_1-1, df2 = n_2-1)
+print("F-stat p-value")
+print(f_pval)
+
+#for equal variances
+s=sqrt(((n_1-1)*s_1^2 + (n_2-1)*s_2^2)/(n_1+n_2-2))
+
+#... perform t-test
+tstat=abs(x_1_bar-x_2_bar)/(s*sqrt(1/n_1 + 1/n_2))
+t_pval=1-pt(tstat,df = n_1 + n_2 - 2)
+
+print("T-test (equal variances) p-value")
+print(t_pval)
+```
+
+### 2.3
+How about if we increase our sample size?
+```{r}
+set.seed(2)
+A_numMutations = rnorm(120,mean = 25800,sd = 5500)
+B_numMutations = rnorm(113,mean = 27600,sd = 7200)
+x_1_bar=mean(A_numMutations)
+x_2_bar=mean(B_numMutations)
+n_1=length(A_numMutations)
+n_2=length(B_numMutations)
+s_1=sd(A_numMutations)
+s_2=sd(B_numMutations)
+
+#perform f-stat test
+f_stat=s_1^2/s_2^2
+f_pval=pf(f_stat,df1 = n_1-1, df2 = n_2-1)
+cat("F-stat p-value: ",f_pval,"\n")
+
+
+# for unequal variances
+df_unequal=(s_1^2/n_1 + s_2^2/n_2)^2/
+  ((s_1^2/n_1)^2/(n_1-1) + (s_2^2/n_2)^2/(n_2-1))
+
+#... perform t-test
+tstat=abs(x_1_bar-x_2_bar)/(sqrt(s_1^2/n_1 + s_2^2/n_2))
+t_pval=1-pt(tstat,df = df_unequal)
+
+cat("T-test (unequal variances) p-value: ",t_pval, "\n")
+
+#for equal variances
+s=sqrt(((n_1-1)*s_1^2 + (n_2-1)*s_2^2)/(n_1+n_2-2))
+
+#... perform t-test
+tstat=abs(x_1_bar-x_2_bar)/(s*sqrt(1/n_1 + 1/n_2))
+t_pval=1-pt(tstat,df = n_1 + n_2 - 2)
+
+cat("T-test (equal variances) p-value: ", t_pval, "\n")
+
+```
+
+### 2.4
+For our small sample size, what is our 95% confidence interval of the difference in mutation rate between the two populations? Does it include 0?
+```{r}
+set.seed(2)
+A_numMutations = rnorm(8,mean = 25800,sd = 5500)
+B_numMutations = rnorm(7,mean = 27600,sd = 7200)
+x_1_bar=mean(A_numMutations)
+x_2_bar=mean(B_numMutations)
+n_1=length(A_numMutations)
+n_2=length(B_numMutations)
+s_1=sd(A_numMutations)
+s_2=sd(B_numMutations)
+
+#already performed f-stat: equal
+
+#for unequal variances
+s=sqrt(((n_1-1)*s_1^2 + (n_2-1)*s_2^2)/(n_1+n_2-2))
+
+#... Confidence interval
+delta_xbar = x_2_bar-x_1_bar
+range = qt(.975,df = n_1 + n_2 - 2) * s * sqrt(1/n_1 + 1/n_2)
+cat("We are 95% confident our true difference is between ", delta_xbar-range, " and ",delta_xbar+range, "\n")
+
+```
+### 2.5
+How does our confidence interval change when we increase our sample size? 
+
+```{r}
+set.seed(2)
+A_numMutations = rnorm(120,mean = 25800,sd = 5500)
+B_numMutations = rnorm(113,mean = 27600,sd = 7200)
+x_1_bar=mean(A_numMutations)
+x_2_bar=mean(B_numMutations)
+n_1=length(A_numMutations)
+n_2=length(B_numMutations)
+s_1=sd(A_numMutations)
+s_2=sd(B_numMutations)
+
+#already performed f-stat: equal
+
+#for equal variances
+df_unequal=(s_1^2/n_1 + s_2^2/n_2)^2/
+  ((s_1^2/n_1)^2/(n_1-1) + (s_2^2/n_2)^2/(n_2-1))
+
+#... Confidence interval
+delta_xbar = x_2_bar-x_1_bar
+range = qt(.975,df = df_unequal) * sqrt(s_1^2/n_1 + s_2^2/n_2)
+cat("We are 95% confident our true difference is between ", delta_xbar-range, " and ",delta_xbar+range, "\n")
+
+```
+
+Cancer mutation rates inspired by Alexandrov et. al Nature 2013.

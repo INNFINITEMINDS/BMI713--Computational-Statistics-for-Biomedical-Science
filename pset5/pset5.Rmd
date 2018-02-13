@@ -1,0 +1,302 @@
+---
+title: "pset5"
+author: "Chen Dong"
+date: "11/28/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(MASS)
+library(survival)
+library(tibble)
+```
+
+#1
+####Perform a multiple regression of Distance on R_Strength and L_Strength. Compare the p-values for the coefficients and the p-value for the global F-test.
+```{r}
+# read in data
+raw_data <-
+  read.table("http://www.statsci.org/data/general/punting.txt", header = TRUE)
+```
+
+```{r}
+# fit linear model
+my.model.1 <- lm(Distance ~ R_Strength + L_Strength, data = raw_data)
+summary(my.model.1)
+```
+P-values for R_Strength and L_Strength coef. are 0.173 and 0.689, respectively. P_value for the global F test is much small and significant, which is 0.00669.
+
+####Perform now a simple linear regression of Distance on R_Strength and one of Distance on L_Strength. What are the p-values of the coefficients? 
+```{r}
+# fit linear model
+my.model.2 <- lm(Distance ~ R_Strength, data = raw_data)
+summary(my.model.2)
+my.model.3 <- lm(Distance ~ L_Strength, data = raw_data)
+summary(my.model.3)
+```
+P_value for R_Strength coef. is 0.00127. P_value for L_Strength coef. is 0.00354. 
+
+####Compare the p-values for the coefficients from the multiple regression model and those obtained from the simple linear regression. Are they significant in both cases? If not, explain why this happens. 
+The p-values for the coefficients from the multiple regression model are greater than those obtained from the simple linear regression. They are significant from the simple regression model but not from the multiple linear regression. It is because R_Strength and L_Strength are correlated.
+
+####Create a linear regression model considering the gas consumption depending on both insulation and temperature. Can these two variables explain the gas consumption? Interpret the coefficients obtained and their significance (one is a dummy variable the other is continuous!). Comment the results.
+```{r}
+# fit linear model
+my.model.4 <- lm(Gas ~ Insul + Temp, data = whiteside)
+summary(my.model.4)
+```
+These two variables can explain the gas consumption. Both variables coef. have p_values smaller than 0.05, meaning they are significant. For Insul, the coef. is -1.56520, meaning the gas consumption reduces 1.56520 after insulation when the temperature is the same. For Temp, the coef. is -0.33670, meaning the gas consumption reduces 0.33670 for every degree C increase when insulation is the same. With adjusted R^2 equal 0.9063 and overall p_value less than 10^-15, the result shows it's significant and the model fits well.
+
+####Display a scatter plot of temperature and gas with dots colored by insulation values. Add 2 regression lines for before and after insulation installation. 
+```{r}
+plot(whiteside$Temp,
+     whiteside$Gas,
+     col = whiteside$Insul,
+     pch = 20)
+abline((my.model.4$coefficients[1] + my.model.4$coefficients[2]),
+       my.model.4$coefficients[3],
+       col = "red")
+abline(my.model.4$coefficients[1],
+       my.model.4$coefficients[3])
+legend("topright",c("before insulation","after insulation"),lty=c(1,1),lwd=c(2.5,2.5),col=c("black","red"))
+```
+
+####Create an interaction model to check whether there is a combined effect of insulation and temperature and comment the results obtained.
+```{r}
+# fit linear model
+my.model.5 <- lm(Gas ~ Insul*Temp, data = whiteside)
+summary(my.model.5)
+```
+There is a combined effect of insulation and temperature. The interaction term coef. is 0.11530 which has a positive effect on gas consumption. Its p_value is 0.000731, which is significant. Insul and Temp and overall model are still significant after adding the interaction term. With the adjustied R^2 equal 0.9235, which is greater than previous case of 0.9063, the model fits better after adding the interaction term.
+
+#2
+####Complete the third column of the table, reporting the number n(t) of rats alive at the beginning of the day. At the start of day 205, how many rats were at risk for dying of cancer?
+```{r}
+Day <- c(142,156,163,198,204,205)
+Numb_Deaths <- c(1,1,1,1,0,1)
+Live_at_that_day <- c(20,19,18,17,17,15)
+data_frame(Day,Numb_Deaths,Live_at_that_day)
+```
+At the start of day 205, 15 rats were at risk for dying of cancer.
+
+####What was the observed probability of dying from cancer at day 205?
+```{r}
+# S(204)=S(198)
+# S(205)=15/16*S(204)
+1-15/16*17/21
+```
+The observed probability of dying from cancer at day 205 is 0.242.
+
+####Estimate the observed probability of surviving until day 160.
+```{r}
+# S(160)=S(156)
+19/21
+```
+The observed probability of surviving until day 160 is 0.905
+
+#3
+####Obtain Kaplan-Meier plots for the two categories of the variable cell type 1 (1 = large, 0 = other). Comment on how the two curves compare with each other. Moreover, carry out the log-rank test and draw conclusions from the test. NOTE: use function survdiff to perform the log-rank test.
+```{r}
+# Kaplan-Meier plots
+data <- read.csv("vets.csv")
+fit <- survfit(Surv(V6, V11) ~ V2, data = data)
+plot(fit,
+     lty = 1:2,
+     xlab = "Time (days)",
+     ylab = "Survival probability")
+legend("topright", c("other", "large"), lty = 1:2)
+```
+Large group has higher survival propability than other group before about 300 days and then they overlap with each other. But other group survive longer than large group.
+```{r}
+# log-rank test
+survdiff(Surv(V6, V11) ~ V2, data = data)
+```
+With p_value equal 0.0822 which greater than 0.05, the result is not significant. And we cannot reject the null of having no difference between the survial times of two groups.
+
+####Obtain Kaplan-Meier plots for the four categories of cell type-large, adeno, small, and squamous. Note that you will need to recode the data to define a single variable which numerically distinguishes the four categories (e.g., 1 = large, 2 = adeno, etc.). As in the previous part, compare the four Kaplan-Meier curves. Also, carry out the log-rank for the equality of the four curves and draw conclusions. NOTE: use function survdiff to perform the log-rank test.
+```{r}
+# reform the data
+large <-
+  data.frame(
+  "time" = data$V6[data$V2 == 1],
+  "status" = data$V11[data$V2 == 1],
+  "categories" = rep("large", length(which(data$V2 == 1)))
+  )
+adeno <-
+  data.frame(
+  "time" = data$V6[data$V3 == 1],
+  "status" = data$V11[data$V3 == 1],
+  "categories" = rep("adeno", length(which(data$V3 == 1)))
+  )
+small <-
+  data.frame(
+  "time" = data$V6[data$V4 == 1],
+  "status" = data$V11[data$V4 == 1],
+  "categories" = rep("small", length(which(data$V4 == 1)))
+  )
+squamous <-
+  data.frame(
+  "time" = data$V6[data$V5 == 1],
+  "status" = data$V11[data$V5 == 1],
+  "categories" = rep("squamous", length(which(data$V5 == 1)))
+  )
+# combine all categories together
+new_data <- rbind(large, adeno, small, squamous)
+# Kaplan-Meier plots
+fit <- survfit(Surv(time, status) ~ categories, data = new_data)
+plot(fit,
+     lty = 1:4,
+     col = 1:4,
+     xlab = "Time (days)",
+     ylab = "Survival probability")
+legend("topright", c("large", "adeno", "small", "squamous"), lty = 1:4, col = 1:4)
+```
+Suqamous group survive the longest, then large group, followed by small group and adeno group. 
+```{r}
+# log rank test
+survdiff(Surv(time, status) ~ categories, data = new_data)
+```
+P-value is equal 1.27*10e-5, which is less than 0.05, meaning the result is significant and we can reject the null and conclude that the survial time between four groups are not identical.
+
+#4
+####Investigate the disease-free survival time using the Kaplan-Meier estimate for the survival curves. Plot the curves and comment briefly on what you see. What is the three year disease-free survival of the three patient types? HINT: The variables for the Surv function are t2 and d3 since we are interested in the disease free survival.
+```{r}
+# Kaplan-Meier estimate 
+library(KMsurv)
+data(bmt)
+help(bmt)
+bmt$group <- as.factor(bmt$group)
+fit.bmt <- survfit(Surv(t2, d3) ~ group, data = bmt)
+plot(fit.bmt,
+     lty = 1:3,
+     col = 1:3,
+     xlab = "Time (days)",
+     ylab = "Estimated Disease−Free Survival")
+legend("topright", c("ALL", "AML low risk", "AML high risk"), lty = 1:3, col = 1:3)
+```
+The group "AML low risk" has the highest estimated Disease−Free Survival, followed by ALL group and AML high risk group. ALL and AML high risk groups estimated Disease−Free Survival get steady after about 700 days. The three year Disease−Free Survival for ALL, AML low risk, and AML high risk respectively are about 0.353, 0.547, and 0.244.
+
+####Check whether these three curves are really different using the log-rank test. Comment the results. NOTE: use function survdiff to perform the log-rank test. 
+```{r}
+#  log-rank test
+survdiff(Surv(t2, d3) ~ group, data = bmt)
+```
+P-value is equal 0.001, which is less than 0.05, meaning the result is significant and we can reject the null and conclude that the survial time between three groups are not identical.
+
+####We want to extend the basic comparisons of the three patient groups using a Cox PH model for time-independent covariates. Generate the Cox model using group as independent variable. Does the group ‘AML Low Risk’ (i.e. group = 2) reduce the hazard? If yes, by how much (report as a percentage)?
+```{r}
+# a Cox PH model
+summary(coxph(Surv(t2, d3) ~ group, data = bmt))
+```
+The hazard ratio for group 2 is 0.563, meaning being AML low risk reduces the hazard by a factor of 0.563, or 43.7%. And p value is 0.046, which is less than 0.05, meaning the result is significant.
+
+####For the variables age (z1, z2), gender (z3, z4) and CMV status (z5, z6) we want to use also the interaction term between donor and patient (HINT: use the ∗ symbol in the model, e.g. group + z1 ∗ z2 is equivalent to group + z1 + z2 + z1 : z2).
+```{r}
+# z7 (waiting time to transplant)
+mod_var1 <- coxph(Surv(t2, d3)~group+z7, data=bmt)
+summary(mod_var1)
+# z8 (FAB class)
+mod_var1 <- coxph(Surv(t2, d3)~group+z8, data=bmt)
+summary(mod_var1)
+# z10 (MTX)
+mod_var1 <- coxph(Surv(t2, d3)~group+z10, data=bmt)
+summary(mod_var1)
+# z1 and z2 (patient and donor age)
+mod_var1 <- coxph(Surv(t2, d3)~group+z1*z2, data=bmt)
+summary(mod_var1)
+# z3 and z4 (patient and donor gender)
+mod_var1 <- coxph(Surv(t2, d3)~group+z3*z4, data=bmt)
+summary(mod_var1)
+# z5 and z6 (patient and donor CMV status)
+mod_var1 <- coxph(Surv(t2, d3)~group+z5*z6, data=bmt)
+summary(mod_var1)
+```
+Significant covariates are z8, and z1 and z2 with corresponding p values less than 0.05.
+
+####replace one of the significant covariate with each of the not-significant covariate at a time and look at the performance of the model (Wald test). Example: if z7 and z3 ∗ z4 are the only significant covariates, try to replace z3 ∗ z4 first with z8 and check the results of the model, then with z1 ∗ z2. . . . (5 points)
+```{r}
+# the model with the linear combination of group and all the resulting significant covariates
+mod_var1 <- coxph(Surv(t2, d3) ~ group + z8 + z1 * z2, data = bmt)
+summary(mod_var1)
+# replace z8 with z7
+mod_var1 <- coxph(Surv(t2, d3) ~ group + z7 + z1 * z2, data = bmt)
+summary(mod_var1)
+# replace z8 with z10
+mod_var1 <- coxph(Surv(t2, d3) ~ group + z10 + z1 * z2, data = bmt)
+summary(mod_var1)
+# replace z8 with z3*z4
+mod_var1 <- coxph(Surv(t2, d3) ~ group + z3 * z4 + z1 * z2, data = bmt)
+summary(mod_var1)
+# replace z8 with z5*z6
+mod_var1 <- coxph(Surv(t2, d3) ~ group + z5 * z6 + z1 * z2, data = bmt)
+summary(mod_var1)
+# replace z1*z2 with z7
+mod_var1 <- coxph(Surv(t2, d3) ~ group + z8 + z7, data = bmt)
+summary(mod_var1)
+# replace z1*z2 with z10
+mod_var1 <- coxph(Surv(t2, d3) ~ group + z8 + z10, data = bmt)
+summary(mod_var1)
+# replace z1*z2 with z3*z4
+mod_var1 <- coxph(Surv(t2, d3) ~ group + z8 + z3 * z4, data = bmt)
+summary(mod_var1)
+# replace z1*z2 with z5*z6
+mod_var1 <- coxph(Surv(t2, d3) ~ group + z8 + z5 * z6, data = bmt)
+summary(mod_var1)
+```
+
+####keep all the significant covariates and add each of the not-significant covariate at a time and look at the performance of the model (Wald test). Example: if z7 and z3 ∗ z4 are the only significant covariates, try to use z7, z8 and z3∗z4 and check the results of the model, then try z7, z3∗z4 and z1∗z2... 
+```{r}
+# add z7
+mod_var1 <- coxph(Surv(t2, d3) ~ group + z8 + z1 * z2 + z7, data = bmt)
+summary(mod_var1)
+# add z10
+mod_var1 <- coxph(Surv(t2, d3) ~ group + z8 + z1 * z2 + z10, data = bmt)
+summary(mod_var1)
+# add z3*z4
+mod_var1 <- coxph(Surv(t2, d3) ~ group + z8 + z1 * z2 + z3 * z4, data = bmt)
+summary(mod_var1)
+# add z5*z6
+mod_var1 <- coxph(Surv(t2, d3) ~ group + z8 + z1 * z2 + z5 * z6, data = bmt)
+summary(mod_var1)
+```
+
+####Are there combinations tested in (a) and (b) better than the model that combines only the covariates which resulted significant when they were individually used in the original model with group? 
+There are not any combinations tested in (a) and (b) better than the model that combines only the covariates which resulted significant when they were individually used in the original model with group
+
+####Use stepwise selection (in both directions, i.e. backward and forward) using the function step which uses the AIC (Akaike information criterion) and compare the result with the best model previously obtained. Look at the final model obtained from the stepwise selection: which covariate shows the strongest association with poor survival? (Provide a proper explanation to your choice)
+```{r}
+# include all covariates in the model
+mod_var1 <- coxph(Surv(t2, d3) ~ group + z7 + z8 + z10 + z1*z2 + z3*z4 + z5*z6, data = bmt)
+# Select a formula-based model by AIC
+step_mod <- step(mod_var1, direction = c("both"))
+summary(step_mod)
+```
+The results using step and one with the best model previously obtained are the same. z8 (FAB class) shows the strongest association with poor survival because it has the largest exp(coef) = 2.3104, meaning it has the highest hazard ratio. 
+
+
+####Create an R function which receives as input the p-values and provides as output the highest p-value with a corresponding Benjamini-Hochberg FDR < 0.05. Do not use or copy the implementation provided by the p.adjust function. HINT: the usage of while can be useful.
+```{r}
+# R function which receives as input the p-values and provides as output the highest p-value with a corresponding Benjamini-Hochberg FDR < 0.05
+pvalue.adj <- function(p) {
+  n <- length(p) # number of p values
+  ## Sort the p-values and keep track of the order
+  id <- order(p) # order index of p values
+  p.ord <- p[id] # reorder by index
+  p.cor <- 0.05 * (1:n) / n # corrected value with FRD<0.05
+  p.max <- 0 # initialize the highest p-value with a corresponding Benjamini-Hochberg FDR < 0.05
+  # compare p values with corrected values
+  for (i in 1:n) {
+    if (p.ord[i] < p.cor[i])
+      p.max = p.ord[i]
+  }
+  if (p.max==0)
+    return("no pvalues with FDR < 0.05")
+  else 
+    return(p.max)
+}
+# testing
+p = runif(100, 0, 0.05)
+pvalue.adj(p)
+```
+

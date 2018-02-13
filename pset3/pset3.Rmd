@@ -1,0 +1,207 @@
+---
+title: "pset3"
+author: "Chen Dong"
+date: "11/7/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### Instructions:
+
+Please submit this problem set before class on Tuesday, November 14. Problem sets may be submitted within a week past the due date at a 20% penalty; each person is allowed to submit one problem late (within a week) without penalty. Please comment your code indicating what your functions do and any relevant passage (not necessarily every line of code), because it is part of the requirements of each exercise. Missing comments will not allow the full score.
+
+If you have any questions, please post on the piazza site. This problem set was prepared by Tiziana Sanavia and Giorgio Melloni, so they will be most prepared to answer questions.
+
+NOTE: there are some exercises (1.e, 3.c and Extra.b) where we ask to perform the calculation "by hand". This means that you are not allowed to use the built-in R functions like `chisq.test`, `wilcox.test` and `fisher.test` but rather perform all the passages as shown in the lectures (still using R for the math, if needed). 
+
+### 1. Non-Parametric Testing Part 1 (35 points)
+
+A pharmaceutical company is testing a new soporific drug that is supposed to be more effective than the state-of-the-art medication. 10 subjects are recruited and the hours of extra sleep are reported. The null hypothesis $H_0$ is that there is no difference in extra hours of sleep between the two drugs.
+
+```{r , echo=FALSE , eval=TRUE}
+Subject <- 1:10
+Old_Drug <- c(1.9 , -1.6 , -0.2 , -1.3 , -0.1 , 3.4 , 3.7 , 0.8 , 0.0 , 2.0)
+New_Drug <- c(0.7 , 0.8 , 1.1 , 0.1 , -0.2 , 4.4 , 5.5 , 1.6 , 4.6 , 3.4)
+```
+
+#### (a) Calculate the Wilcoxon signed-rank T statistic (5 points)
+```{r}
+D.list <- Old_Drug- New_Drug
+df <- data.frame(X = Old_Drug, Y=New_Drug, D=D.list) 
+# sort by absolute difference
+df.sort <- df[order(abs(D.list)), ] 
+# add the rank
+df.sort$rank <- 1:nrow(df.sort)
+# manually calculate the T statistic
+T <- sum(df.sort$rank[df.sort$D > 0])
+print(T)
+```
+
+#### (b) Calculate $\mu_T$ and $\sigma_T$ under the Null hypothesis (5 points)
+```{r}
+n <- 10
+mu_t <- n*(n+1)/4
+sigma_t <- sqrt(n*(n+1)*(2*n+1)/24)
+mu_t
+sigma_t
+```
+
+#### (c) Using the T statistic, $\mu_T$ and $\sigma_T$, calculate the p-value under the normal approximation and comment the result obtained. (5 points)
+```{r}
+pnorm(5,mu_t,sigma_t)
+```
+# The normal approximation p-value is below the significance level of 0.05. We can reject the null hypothesis.
+
+#### (d) Calculate the p-value using the built-in R function for Wilcoxon signed-rank test. Are the p-values different? Are the conclusions different? NOTE, use correct=FALSE and exact=TRUE to obtain the same result in (1.d) and (1.e) (5 points)
+```{r}
+wilcox.test(Old_Drug,New_Drug,paired = T,correct = F,exact = T)
+```
+# The p-values are slightly different. But both p-values are below the significance level of 0.05 so the conclusions is the same. We can reject the null hypothesis.
+
+#### (e) Calculate the exact Wilcoxon signed-rank p-value "by hand" and show all the steps in order to obtain it (DO NOT use the built-in function and comment your code). (10 points)
+```{r}
+# affixing a sign to each rank
+sign <- rep("pos",10)
+sign[df.sort$D<0] <- "neg"
+# add to the preview data frame
+df.sort$sign <- sign
+df.sort
+# calculate v+ and v-
+v_pos <- sum(df.sort$rank[df.sort$sign=="pos"])
+v_neg <- sum(df.sort$rank[df.sort$sign=="neg"])
+# take the smaller value
+v_stat <- min(v_pos,v_neg)
+v_stat
+```
+# Looking at tables of critical values for the Wilcoxon signed rank sum test, we get critical value at n=10 and 0.05 alpha as v_crit=8. Since v_stat(5) < v_crit(8), we reject the null hypothesis.
+
+#### (f) Calculate the p-value using an appropriate equivalent parametric test and comment the obtained results with respect to the 'Non-parametric' version. (5 points)
+```{r}
+t.test(Old_Drug,New_Drug,paired = T)
+```
+# The resulting p-value is slightly larger than the p-value using the built-in R function for Wilcoxon signed-rank test. But it is below the significance level of 0.05, so the result of rejecting the null is the same.
+
+### 2. Non-Parametric Testing Part 2 (30 points)
+
+In this second part we are going to simulate a few data to check the difference between unpaired T-test and Wilcoxon rank sum test.
+
+Imagine two vectors of length 10 from two different exponential distributions:
+
+```{r , echo = TRUE , eval = FALSE}
+x <- rexp(10 , rate = 10)
+y <- rexp(10 , rate = 40)
+```
+
+The hypothesis test is that $\mu_x$ is different than $\mu_y$ (two-sided $H_1$)
+
+#### (a) What is the most appropriate test in this case and why? (5 points)
+# The most appropriate test is Mann Whitney U test because we want to compare differences between two independent groups when the dependent variable is not normally distributed.
+
+#### (b) As a general rule, if the assumptions of CLT do not hold, a non parametric test is more appropriate and sometimes more powerful than its parametric counterpart. By running a simulation with 1000 random couples (x,y) like above, show that the fraction of rejected Null hypotheses at alpha = 0.01 is higher in the case of a non parametric test. NOTE alpha is 1%!! What are we showing with this simulation? (10 points)
+```{r}
+nonpara <- numeric()
+para <- numeric()
+for (i in 1:1000){
+  x_test <- rexp(10,rate=10)
+  y_test <- rexp(10,rate=40)
+  nonpara[i] <- wilcox.test(x_test,y_test,conf.level = 0.99,correct = F)$p.value
+  para[i] <- t.test(x_test,y_test,conf.level = 0.99)$p.value
+}
+# how many pvalue are below 0.01 in a non parametric test
+table(nonpara<0.01)
+# how many pvalue are below 0.01 in a parametric test
+table(para<0.01)
+```
+# We are showing with this simulation that non parametric tests can apply even when the CLT does not hold but t-test cannot.
+
+#### (c) An old statistical adagio says "If the data don't behave, hit it with a log. If the data still don't behave, hit it with a log again". What happen if we log-transform the data? Run the same simulation with log(x) and log(y) and comment the results obtained? (10 points)
+```{r}
+nonpara_log <- numeric()
+para_log <- numeric()
+for (i in 1:1000){
+  x_test_log <- log(rexp(10,rate=10))
+  y_test_log <- log(rexp(10,rate=40))
+  nonpara_log[i] <- wilcox.test(x_test_log,y_test_log,conf.level = 0.99,correct = F)$p.value
+  para_log[i] <- t.test(x_test_log,y_test_log,conf.level = 0.99)$p.value
+}
+# how many pvalue are below 0.01 in a non parametric test
+table(nonpara_log<0.01)
+# how many pvalue are below 0.01 in a parametric test
+table(para_log<0.01)
+```
+# The fraction of rejected Null hypotheses at alpha = 0.01 is still higher in the case of a non parametric test. But for the parametric test, the fraction of rejected Null hypotheses at alpha = 0.01 increased in log case than the previous case.
+
+#### (d) Is the log transformation useful for the wilcoxon test? if not, why? (5 points)
+# The log transformation is not useful for the wilcoxon test because it uses the rank of the data instead of the data itself. So when log transforming the data, the rank of the data does not change. Thus the result of the wilcoxon test will not change when log transform the data.
+
+### 3. Contingency tables (35 points)
+
+A statistical analysis that combines the results of several studies on the same subject is called a meta-analysis. A meta-analysis compared aspirin with placebo on incidence of heart attack and of stroke, separately for men and from women (J. Am. Med. Assoc., 295: 306-313, 2006). For the Women's Health Study, heart attacks were reported for 198 of 19,934 taking aspirin and for 193 of 19,942 taking placebo. We are interested in whether aspirin was helpful in reducing the risk of heart attack.
+
+#### (a) State the null hypothesis and the alternative hypothesis. (2 points)
+# $H_0$: the probability of having a heart attack of taking aspirin is the same as the probability of having a heart attack of taking placebo ($p_a=p_p$)
+# $H_1$: the probability of having a heart attack of taking aspirin is greater than the probability of having a heart attack of taking placebo ($p_a>p_p$)
+
+#### (b) Construct the 2 x 2 contingency table that cross classifies the treatment (aspirin, placebo) and heart attack status (yes, no). (3 points)
+```{r}
+mat_obs <- matrix(c(198,193,19934-198,19942-193),2,2,dimnames = list(c("aspirin","placebo"),c("yes","no")))
+knitr::kable(mat_obs)
+```
+
+#### (c) Perform the chi-square test. Report the test statistic (5 points), the degrees of the freedom (5 points) and calculate the p-value without using the R chisquare built-in function (10 points). What conclusion can you draw from this test? (5 points)
+```{r}
+first <- (198+193)/(19934+19942)*(19934)
+mat_exp <- matrix(c(first,198+193-first,19934-first,19942-(198+193-first)),2,2,dimnames = list(c("aspirin","placebo"),c("yes","no")))
+chi_sqr <- sum((mat_obs-mat_exp)^2/mat_exp)
+chi_sqr
+pchisq(chi_sqr,df=1,lower.tail = F)
+```
+# The test statistic is 0.066614, the degrees of the freedom is 1 and the p-value is 0.7963. The p-value is greater than the significance level of 0.05, so we cannot reject the null hypothesis.
+
+#### (d) Perform the chi-square test using R built-in function. NOTE: use correct=FALSE to obtain the same result of point (3.c). (5 points)
+```{r}
+chisq.test(mat_obs,correct = F)
+```
+
+### Extra: Fisher's Exact Test (8 points)
+
+Consider the following example of contingency table from a study evaluating the correlation between gender and diet:
+
+```{r , echo=FALSE , eval=TRUE}
+mat<-matrix(NA,3,4)
+colnames(mat)<-c(" ","Diet","Non Diet","rowTotal")
+mat[1,]<-c("Men","2","10","12")
+mat[2,]<-c("Women","8","12","20")
+mat[3,]<-c("colTotal","10","22","32")
+knitr::kable(mat)
+```
+
+We want to test whether men are less prone to start a diet than women.
+
+#### (a) Display the tables that are as 'extreme' as or more extreme than the observed table (5 points)
+```{r}
+mat.list <- list(matrix(c(0,10,12,10),2,2),matrix(c(1,9,11,11),2,2),matrix(c(2,8,10,12),2,2))
+mat.list
+```
+
+#### (b) Using the tables in above, calculate the probabilities to obtain the p-value of the Fisher's Exact test (3 points)
+```{r}
+prob <- numeric()
+for (i in 1:3){
+  a <- mat.list[[i]][1,1]
+  b <- mat.list[[i]][1,2]
+  c <- mat.list[[i]][2,1]
+  d <- mat.list[[i]][2,2]
+  prob[i] <- (factorial(a+b)*factorial(a+c)*factorial(d+b)*factorial(c+d))/(factorial(a)*factorial(b)*factorial(c)*factorial(d)*factorial(a+b+c+d))
+}
+sum(prob)
+```
+# So the p-value is 0.163 and it is greater than the significance level of 0.05. Thus we cannot reject the null hypothesis of that men and women are equally likely to start a diet.
+```{r}
+# verify
+mat <- matrix(c(2,8,10,12),2,2)
+fisher.test(mat,alternative = "less")$p.value
+```

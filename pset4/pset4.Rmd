@@ -1,0 +1,187 @@
+---
+title: "pset4"
+author: "Chen Dong"
+date: "11/15/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# CODE 1.a
+```{r}
+# read in data and assign column 1 to x and column 2 to y
+dat <- read.csv("USPop.csv")
+x <- dat$Year
+y <- dat$Population
+n <- length(x)
+# calculate the r using formula
+r <- sum(((x - mean(x)) / sd(x) * (y - mean(y)) / sd(y)) / (n - 1))
+r
+```
+
+# CODE 1.b
+```{r}
+# t statistic and p value
+t <- r * sqrt((n - 2) / (1 - r ^ 2))
+pt(t, df = n - 2, lower.tail = F) * 2
+# z statistic and p value
+z <- log((1 + r) / (1 - r)) / 2
+pnorm(z, sd = 1 / sqrt(n - 3), lower.tail = F)
+```
+
+# ANSWER 1.b
+## Both p values are smaller than significance level of 0.05, meaning that we can reject the null of $\rho=\rho_0=0$.
+
+# CODE 1.c
+```{r}
+cor(x, y, method = "spearman")
+```
+# ANSWER 1.c
+## Spearman correlation is larger than pearson correlation. This might be because Spearman’s rank correlation is less sensitive to the assumption of normality than the Pearson correlation.
+
+# CODE 1.d
+```{r}
+# corruption
+y.corrup <- y
+y.corrup[x == 2010] <- -1 * y[x == 2010]
+# Pearson
+cor(x, y.corrup)
+# Spearman
+cor(x, y.corrup, m = "sp")
+```
+# ANSWER 1.d
+## Pearson correlation drops a lot from original value but spearman correlation is relatively robust, which drops less. This might be because Spearman’s rank correlation is less sensitive to outlying values than the Pearson correlation.
+
+# 2.a
+```{r}
+# install.packages("UsingR")
+library(UsingR)
+data(father.son)
+plot(
+father.son$fheight,
+father.son$sheight,
+xlab = "father height",
+ylab = "son height",
+main = "scatter of father and son height"
+)
+```
+# ANSWER 2.a
+## The data is roughly linearly correlated.
+
+# CODE 2.b
+```{r}
+x <- father.son$fheight
+y <- father.son$sheight
+n <- length(father.son$fheight)
+# slope
+b <- sum((x - mean(x)) * (y - mean(y))) / sum((x - mean(x)) ^ 2)
+b
+# intercept
+a <- mean(y) - b * mean(x)
+a
+```
+
+# CODE 2.c
+```{r}
+# linear model
+lm(y ~ x)
+# correct
+```
+
+# CODE 2.d
+```{r}
+plot(x,
+     y,
+     xlab = "father height",
+     ylab = "son height",
+     main = "scatter of father and son height")
+     abline(lm(y ~ x))
+```
+
+# CODE 2.e
+```{r}
+# y estimate
+y.esti <- a + b * x
+# r^2
+r_sqrt <- sum((y.esti - mean(y)) ^ 2) / sum((y - mean(y)) ^ 2)
+r_sqrt
+```
+
+# ANSWER 2.e
+## The line fits the data ok.
+
+# CODE 2.f
+```{r}
+plot(x,
+     y - y.esti,
+     xlab = "father height",
+     ylab = "residual",
+     main = "residual of father and son height vs father height")
+```
+
+# ANSWER 2.f
+## The points are normally distributed.
+
+# CODE 2.g
+```{r}
+# standard error of b
+b.se <- sqrt(sum((y - y.esti) ^ 2) / (n - 2) / sum((x - mean(x)) ^ 2))
+# t statistic
+t <- b / b.se
+t
+# p value
+pt(t, df = n - 2, lower.tail = F) * 2
+```
+
+# ANSWER 2.g
+## P value is smaller than significance level of 0.05, meaning we can reject the null of $\beta=0$
+
+# CODE 2.h
+```{r}
+# upper bound of 95% CI
+b + qt(0.975, n - 2) * b.se
+# lower bound of 95% CI
+b - qt(0.975, n - 2) * b.se
+```
+
+# CODE 2.i
+```{r}
+set.seed(1)
+father.son$random <- rnorm(dim(father.son)[1])
+summary(lm(father.son$sheight ~ father.son$fheight + father.son$random))
+```
+
+# ANSWER 2.i
+## P value for father height is smaller than the significance level of 0.05 (considered significant). P value for random variable is larger than the significance level of 0.05 (not significant).
+
+# CODE 3
+```{r}
+set.seed(1)
+son.esti.mean <- numeric()
+for (i in 1:1000) {
+  # sample 1000 pairs with replacement from original data
+  fatherson_sample <-
+    father.son[sample(1:1078, 1078, replace = T), 1:2]
+  # fit a linear model
+  sample_model <-
+    lm(fatherson_sample$sheight ~ fatherson_sample$fheight)
+  # a is the intercept and b is the coefficient of the independent variable
+  a <- sample_model$coefficients[1]
+  b <- sample_model$coefficients[2]
+  # calculate the mean of the estimated son height
+  son.esti <- a + b * fatherson_sample$fheight
+  son.esti.mean[i] <- mean(son.esti)
+}
+# mean of the 1000 values
+mean(son.esti.mean)
+# standard dev. of the 1000 values
+sd(son.esti.mean)
+# sort and denote
+h_25 <- sort(son.esti.mean)[25]
+h_975 <- sort(son.esti.mean)[975]
+h_25
+h_975
+```
+
